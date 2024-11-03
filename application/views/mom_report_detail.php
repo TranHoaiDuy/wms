@@ -254,26 +254,52 @@ if (!empty($goodsRecieptInfo)) {
                 </div>
                 <script>
                     $(document).ready(function() {
+                        localStorage.removeItem("savedMaterials");
+
+                        const savedMaterialsKey = "savedMaterials";
+                        let savedMaterials = [];
+
+                        // Đánh dấu trạng thái từ cơ sở dữ liệu khi tải trang
+                        $('#selectedMaterialsTable tbody tr').each(function() {
+                            let id = $(this).data('id');
+                            let rating = $(this).find('.rating').val();
+
+                            if (rating !== "0") {
+                                $(this).data('saved', true);
+                                $(this).find('.rating-material').html('<i class="fa fa-check-circle"></i>');
+                                savedMaterials.push(id);
+                            }
+                        });
+
+                        // Cập nhật vào localStorage sau khi đánh dấu
+                        localStorage.setItem(savedMaterialsKey, JSON.stringify(savedMaterials));
+
                         function checkAllRatings() {
-                            let allRated = true;
+                            let allRatedAndSaved = true;
 
                             $('#selectedMaterialsTable tbody tr').each(function() {
                                 let rating = $(this).find('.rating').val();
-                                if (rating == "0") {
-                                    allRated = false;
+                                let id = $(this).data('id');
+                                let isSaved = savedMaterials.includes(id);
+
+                                if (rating == "0" || !isSaved) {
+                                    allRatedAndSaved = false;
                                     return false;
                                 }
                             });
-                            $('button[name="action"][value="rating-complete"]').prop('disabled', !(allRated));
+
+                            $('button[name="action"][value="rating-complete"]').prop('disabled', !allRatedAndSaved);
                         }
+
+                        // Gọi hàm kiểm tra khi trang được tải
                         checkAllRatings();
 
                         $(document).on('change', '.rating', function() {
                             checkAllRatings();
-
                         });
 
-                        jQuery(document).on("click", ".rating-material", function() {
+
+                        $(document).on("click", ".rating-material", function() {
                             var row = $(this).closest('tr');
                             var id = row.data('id');
                             var note = row.find('.note').val();
@@ -288,8 +314,7 @@ if (!empty($goodsRecieptInfo)) {
                                 return;
                             }
 
-                            // Gửi yêu cầu AJAX để lưu đánh giá
-                            jQuery.ajax({
+                            $.ajax({
                                 type: "POST",
                                 dataType: "json",
                                 url: hitURL,
@@ -303,6 +328,11 @@ if (!empty($goodsRecieptInfo)) {
                                     alert(success_mes);
                                     row.data('saved', true);
                                     currentRow.html('<i class="fa fa-check-circle"></i>');
+                                    if (!savedMaterials.includes(id)) {
+                                        savedMaterials.push(id);
+                                        localStorage.setItem(savedMaterialsKey, JSON.stringify(savedMaterials));
+                                    }
+
                                     checkAllRatings();
                                 } else {
                                     alert(error_mes);
@@ -313,6 +343,7 @@ if (!empty($goodsRecieptInfo)) {
                         });
                     });
                 </script>
+
 
 
             </div>
